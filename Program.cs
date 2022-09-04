@@ -21,7 +21,7 @@ builder.Services.AddSwaggerGen(options =>
         Name = "Authorization",
         Type = SecuritySchemeType.ApiKey
     });
-    options.OperationFilter<SecurityRequirementsOperationFilter>();
+    options.OperationFilter<SecurityRequirementsOperationFilter>(); 
 });
 builder.Services.AddAuthentication(
     JwtBearerDefaults.AuthenticationScheme)

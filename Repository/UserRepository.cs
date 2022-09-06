@@ -6,21 +6,37 @@ using System.Security.Cryptography;
 
 namespace RecordCollector.Repository
 {
-    public interface IAuthRepository
+    public interface IUserRepository
+
     {
         string CreateToken(User user);
         void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt);
         bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt);
+        string GetMyName();
     }
-    public class AuthRepository : IAuthRepository
+    public class UserRepository : IUserRepository
     {
         private readonly IConfiguration _configuration;
+        private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public AuthRepository(IConfiguration configuration)
+        public UserRepository(IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
         {
             _configuration = configuration;
+            _httpContextAccessor = httpContextAccessor;
 
         }
+
+        public string GetMyName()
+        {
+            var result = string.Empty;
+            if(_httpContextAccessor.HttpContext != null)
+            {
+                result = _httpContextAccessor.HttpContext.User.FindFirstValue(ClaimTypes.Name);
+            }
+
+            return result;
+        }
+
         public string CreateToken(User user)
         {
             List<Claim> claims = new List<Claim>()
@@ -45,11 +61,13 @@ namespace RecordCollector.Repository
         }
         public void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
         {
+            User user = new User();
             using (var hmac = new HMACSHA512())
             {
                 passwordSalt = hmac.Key;
                 passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
             }
+
         }
         public bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
         {

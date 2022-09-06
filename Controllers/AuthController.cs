@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using RecordCollector.Dtos;
@@ -16,14 +17,20 @@ namespace RecordCollector.Controllers
     {
         public static User user = new User();
         private readonly IConfiguration _configuration;
-        private readonly IAuthRepository _repo;
+        private readonly IUserRepository _repo;
 
-        public AuthController(IConfiguration configuration, IAuthRepository repo)
+        public AuthController(IConfiguration configuration, IUserRepository repo)
         {
             _configuration = configuration;
             _repo = repo;
         }
 
+        [HttpGet, Authorize]
+        public ActionResult<string> GetMe()
+        {
+            var userName = _repo.GetMyName();
+            return Ok(userName);
+        }
 
         [HttpPost("register")]
         public async  Task<ActionResult<User>> Register(UserDto request)

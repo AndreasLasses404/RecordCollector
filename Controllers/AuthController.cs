@@ -33,7 +33,7 @@ namespace RecordCollector.Controllers
         }
 
         [HttpPost("register")]
-        public async  Task<ActionResult<User>> Register(UserDto request)
+        public ActionResult<User> Register(UserDto request)
         {
             _repo.CreatePasswordHash(request.Password, out byte[] passwordHash, out byte[] passwordSalt);
 
@@ -45,12 +45,13 @@ namespace RecordCollector.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<string>> Login(UserDto request)
+        public ActionResult<string> Login(UserDto request)
         {
             if(user.UserName != request.UserName)
             {
                 return BadRequest("User not found");
             }
+
 
             if(!_repo.VerifyPasswordHash(request.Password, user.PasswordHash, user.PasswordSalt))
             {
@@ -58,6 +59,32 @@ namespace RecordCollector.Controllers
             }
 
             string token = _repo.CreateToken(user);
+
+            var refreshToken = _repo.GenerateRefreshToken();
+            var setRefreshToken = _repo.SetRefreshToken(refreshToken, user);
+            Response.Cookies.Append("refreshToken", setRefreshToken.Item1.Token, setRefreshToken.Item2);
+
+            return Ok(token);
+        }
+
+        [HttpPost("refresh-token")]
+        public ActionResult<string> RefreshToken()
+        {
+            var refreshToken = Request.Cookies["refreshToken"];
+
+            if (!user.RefreshToken.Token.Equals(refreshToken))
+            {
+                return Unauthorized("Invalid Refresh Token.");
+            }
+            else if(user.RefreshToken.Expires < DateTime.Now)
+            {
+                return Unauthorized("Token Expired.");
+            }
+
+            string token = _repo.CreateToken(user);
+            var newRefreshToken = _repo.GenerateRefreshToken();
+            _repo.SetRefreshToken(newRefreshToken, user);
+
             return Ok(token);
         }
 

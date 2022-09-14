@@ -3,6 +3,8 @@ using RecordCollector.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 
 namespace RecordCollector.Repository
 {
@@ -13,6 +15,8 @@ namespace RecordCollector.Repository
         void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt);
         bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt);
         string GetMyName();
+        RefreshToken GenerateRefreshToken();
+        (RefreshToken, CookieOptions) SetRefreshToken(RefreshToken refreshToken, User user);
     }
     public class UserRepository : IUserRepository
     {
@@ -77,6 +81,30 @@ namespace RecordCollector.Repository
 
                 return computedHash.SequenceEqual(passwordHash);
             }
+        }
+
+        public RefreshToken GenerateRefreshToken()
+        {
+            var refreshToken = new RefreshToken
+            {
+                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
+                Expires = DateTime.Now.AddDays(7)
+
+            };
+            return refreshToken;
+        }
+
+        
+
+        public (RefreshToken, CookieOptions) SetRefreshToken(RefreshToken newRefreshToken, User user)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Expires = newRefreshToken.Expires
+            };
+            user.RefreshToken = newRefreshToken;
+            return (newRefreshToken, cookieOptions);
         }
     }
 }
